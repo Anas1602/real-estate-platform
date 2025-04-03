@@ -298,17 +298,14 @@ export default function PropertiesPage() {
       <div className="mb-8">
         <form
           onSubmit={handleSearchSubmit}
-          className="flex flex-col md:flex-row gap-3 p-2 rounded-xl bg-muted/30 border border-border shadow-sm backdrop-blur-sm">
+          className="flex flex-col md:flex-row gap-3 p-2 rounded-xl bg-gray-800/80 border border-gray-700 shadow-sm backdrop-blur-sm">
           <div className="relative flex-grow">
-            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-              <FiSearch className="h-5 w-5 text-muted-foreground" />
-            </div>
             <input
               type="text"
               placeholder="Search by location, property type, or keyword..."
               value={filters.searchTerm}
               onChange={handleSearchChange}
-              className="form-input pl-10 w-full rounded-lg border-muted"
+              className="form-input pl-12 w-full rounded-lg bg-gray-900/60 border-gray-700 text-white placeholder:text-gray-400 placeholder:left-28"
             />
           </div>
           <button
