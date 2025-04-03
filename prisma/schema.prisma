@@ -1,0 +1,184 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - common fields for both buyers and developers
+model User {
+  id                String    @id @default(cuid())
+  name              String
+  email             String    @unique
+  emailVerified     DateTime?
+  password          String?
+  image             String?
+  role              Role      @default(BUYER)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  profileInfo       String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Developer specific relationships
+  properties        Property[]  @relation("DeveloperProperties")
+  
+  // Buyer specific relationships
+  groupMemberships  GroupMember[]
+  reviews           Review[]
+  
+  // Common relationships
+  messages          Message[]
+  receivedRatings   Rating[]    @relation("RatedUser")
+  givenRatings      Rating[]    @relation("RaterUser")
+}
+
+enum Role {
+  BUYER
+  DEVELOPER
+  ADMIN
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+}
+
+model Property {
+  id               String    @id @default(cuid())
+  title            String
+  developerId      String
+  developer        User      @relation("DeveloperProperties", fields: [developerId], references: [id], onDelete: Cascade)
+  location         String
+  address          String
+  city             String
+  state            String
+  zipCode          String
+  basePrice        Float
+  description      String    @db.Text
+  features         String    @db.Text
+  images           String[]
+  status           PropertyStatus @default(ACTIVE)
+  propertyType     PropertyType
+  bedrooms         Int?
+  bathrooms        Int?
+  squareFootage    Float?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  groups           Group[]
+}
+
+enum PropertyStatus {
+  ACTIVE
+  SOLD
+  EXPIRED
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  CONDO
+  TOWNHOUSE
+  LAND
+  COMMERCIAL
+}
+
+model Group {
+  id               String    @id @default(cuid())
+  name             String
+  propertyId       String
+  property         Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  targetPrice      Float?
+  status           GroupStatus @default(FORMING)
+  minMembers       Int       @default(5)
+  maxMembers       Int       @default(20)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  members          GroupMember[]
+  messages         Message[]
+  deal             Deal?
+}
+
+enum GroupStatus {
+  FORMING      // Group is still accepting members
+  NEGOTIATING  // Group is in negotiations with developer
+  COMPLETED    // Deal has been finalized
+  EXPIRED      // Group has expired without a deal
+}
+
+model GroupMember {
+  id            String     @id @default(cuid())
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId       String
+  group         Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  joinedAt      DateTime   @default(now())
+  isAdmin       Boolean    @default(false)
+
+  @@unique([userId, groupId])
+}
+
+model Deal {
+  id            String     @id @default(cuid())
+  groupId       String     @unique
+  group         Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  finalPrice    Float
+  status        DealStatus @default(PENDING)
+  terms         String?    @db.Text
+  signedAt      DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+enum DealStatus {
+  PENDING
+  APPROVED
+  COMPLETED
+  CANCELLED
+}
+
+model Message {
+  id            String     @id @default(cuid())
+  content       String     @db.Text
+  groupId       String
+  group         Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model Review {
+  id            String     @id @default(cuid())
+  content       String     @db.Text
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetId      String     // ID of the user (developer) being reviewed
+  rating        Int        @default(0) // 0-5 star rating
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model Rating {
+  id            String     @id @default(cuid())
+  score         Int        // 1-5 rating
+  raterId       String
+  rater         User       @relation("RaterUser", fields: [raterId], references: [id], onDelete: Cascade)
+  ratedId       String
+  rated         User       @relation("RatedUser", fields: [ratedId], references: [id], onDelete: Cascade)
+  comment       String?    @db.Text
+  createdAt     DateTime   @default(now())
+
+  @@unique([raterId, ratedId])
+}
